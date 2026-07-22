@@ -8,6 +8,9 @@ misc/
 archive/
 *.bak
 
+node_modules/
+dist/
+
 .cursor/
 docs/
 

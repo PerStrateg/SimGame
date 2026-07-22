@@ -1,0 +1,17 @@
+{
+  "name": "simgame",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "start": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "example": "node scripts/run-example.mjs",
+    "examples": "node scripts/run-example.mjs --list"
+  },
+  "devDependencies": {
+    "@fortawesome/fontawesome-free": "5.15.4",
+    "vite": "^7.1.0"
+  }
+}
