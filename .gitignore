@@ -7,3 +7,9 @@ assets/sounds/
 misc/
 archive/
 *.bak
+
+.cursor/
+docs/
+
+AGENTS.md
+SimGame.code-workspace
