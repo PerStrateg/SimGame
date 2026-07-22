@@ -20,7 +20,7 @@ settings.libraries.push('quest')
 settings.libraries.push('roulette')
 settings.styleFile = 'style'
 
-settings.libraries.push('item_links')
+settings.libraries.push('item-links')
 
 settings.panes = 'none'
 
@@ -51,7 +51,7 @@ settings.setup = function() {
   io.updateStatus()
 }
 
-//settings.libraries.push('item_links')
+//settings.libraries.push('item-links')
 
 
 settings.mapStyle = {right:'0', top:'200px', width:'300px', height:'300px', 'background-color':'yellow' }

@@ -6,4 +6,5 @@ settings.version = "0.1"
 settings.thanks = []
 settings.warnings = "No warnings have been set for this game."
 settings.playMode = "dev"
-
+settings.lang = "lang-ru"
+settings.libraries.push("item-links")
