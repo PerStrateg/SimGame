@@ -42,6 +42,8 @@ if (typeof quest.test.runTests !== 'function') {
   process.exit(1)
 }
 
+const TEST_TIMEOUT_MS = 180_000
+
 const done = new Promise((resolveDone) => {
   quest.test.afterFinish = function (ok) {
     resolveDone({ ok, failCount: quest.test.failCount, totalCount: quest.test.totalCount })
@@ -50,7 +52,20 @@ const done = new Promise((resolveDone) => {
 
 quest.test.runTests()
 await new Promise((r) => setTimeout(r, 0))
-const result = await done
+
+let result
+try {
+  result = await Promise.race([
+    done,
+    new Promise((_, reject) => {
+      setTimeout(() => reject(new Error(`TEST timeout after ${TEST_TIMEOUT_MS}ms`)), TEST_TIMEOUT_MS)
+    }),
+  ])
+} catch (e) {
+  console.error(e.message)
+  window.close()
+  process.exit(1)
+}
 
 console.log(`\nDone. total=${result.totalCount} fail=${result.failCount}`)
 window.close()

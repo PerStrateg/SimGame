@@ -34,24 +34,31 @@ const rl = readline.createInterface({
   prompt: '> ',
 })
 
+let chain = Promise.resolve()
+let closing = false
+
 rl.prompt()
-rl.on('line', async (line) => {
-  const cmd = line.trim()
-  if (!cmd) {
-    rl.prompt()
-    return
-  }
-  if (/^(quit|exit|q)$/i.test(cmd)) {
-    rl.close()
-    return
-  }
-  try {
-    quest.runCmd(cmd)
-    await new Promise((r) => setTimeout(r, 0))
-  } catch (err) {
-    console.error(err)
-  }
-  rl.prompt()
+rl.on('line', (line) => {
+  chain = chain.then(async () => {
+    if (closing) return
+    const cmd = line.trim()
+    if (!cmd) {
+      rl.prompt()
+      return
+    }
+    if (/^(quit|exit|q)$/i.test(cmd)) {
+      closing = true
+      rl.close()
+      return
+    }
+    try {
+      quest.runCmd(cmd)
+      await new Promise((r) => setTimeout(r, 0))
+    } catch (err) {
+      console.error(err)
+    }
+    if (!closing) rl.prompt()
+  })
 })
 
 rl.on('close', () => {

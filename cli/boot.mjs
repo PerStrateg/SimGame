@@ -145,11 +145,8 @@ export async function bootQuest(opts = {}) {
     files.push(readRel(folder + snap.customExits + '.js'))
   }
   for (const lib of snap.libraries) {
-    const inLib = `lib/${lib}.js`
-    const inRpg = `rpg/${lib}.js`
-    if (existsSync(resolve(ROOT, inLib))) files.push(readRel(inLib))
-    else if (existsSync(resolve(ROOT, inRpg))) files.push(readRel(inRpg))
-    else throw new Error(`Library not found: ${lib} (tried lib/ and rpg/)`)
+    // Same resolution as QuestJS settings.writeScript → lib/<name>.js only
+    files.push(readRel(`lib/${lib}.js`))
   }
   for (const custom of snap.customLibraries) {
     for (const file of custom.files) {

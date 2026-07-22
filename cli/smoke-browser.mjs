@@ -3,44 +3,55 @@
  * Browser smoke via Playwright against Vite (issue #6).
  */
 import { spawn } from 'node:child_process'
-import { connect } from 'node:net'
+import { resolve } from 'node:path'
 import { chromium } from 'playwright'
 import { ROOT } from './boot.mjs'
 
-function waitPort(port, host = '127.0.0.1', ms = 30000) {
-  const start = Date.now()
-  return new Promise((resolve, reject) => {
-    const tryOnce = () => {
-      const c = connect(port, host, () => {
-        c.end()
-        resolve()
-      })
-      c.on('error', () => {
-        if (Date.now() - start > ms) reject(new Error(`Port ${port} not ready`))
-        else setTimeout(tryOnce, 200)
-      })
-    }
-    tryOnce()
-  })
-}
-
-const port = 5173
+/** Dedicated port so we never accidentally smoke against a leftover `npm run dev`. */
+const port = 5199
 const base = `http://127.0.0.1:${port}`
+const viteBin = resolve(ROOT, 'node_modules/vite/bin/vite.js')
 
-const vite = spawn(process.platform === 'win32' ? 'npx.cmd' : 'npx', ['vite', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
+const vite = spawn(process.execPath, [
+  viteBin,
+  '--host', '127.0.0.1',
+  '--port', String(port),
+  '--strictPort',
+], {
   cwd: ROOT,
   stdio: 'pipe',
-  shell: false,
   env: { ...process.env, BROWSER: 'none' },
 })
 
 let viteLog = ''
-vite.stdout.on('data', (d) => { viteLog += d.toString() })
-vite.stderr.on('data', (d) => { viteLog += d.toString() })
+let viteReadySettled = false
+
+const viteReady = new Promise((resolve, reject) => {
+  const onData = (d) => {
+    viteLog += d.toString()
+    if (!viteReadySettled && /Local:\s+http:\/\/127\.0\.0\.1:5199\//.test(viteLog)) {
+      viteReadySettled = true
+      resolve()
+    }
+  }
+  vite.stdout.on('data', onData)
+  vite.stderr.on('data', onData)
+  vite.on('error', (err) => {
+    if (!viteReadySettled) reject(err)
+  })
+  vite.on('exit', (code) => {
+    if (!viteReadySettled) {
+      reject(new Error(`vite exited early with code ${code}\n${viteLog.slice(-1500)}`))
+    }
+  })
+  setTimeout(() => {
+    if (!viteReadySettled) reject(new Error('vite ready timeout\n' + viteLog.slice(-1500)))
+  }, 30000)
+})
 
 let exitCode = 0
 try {
-  await waitPort(port)
+  await viteReady
   const browser = await chromium.launch({ headless: true })
   const page = await browser.newPage()
   await page.goto(base + '/', { waitUntil: 'domcontentloaded', timeout: 30000 })
@@ -57,14 +68,14 @@ try {
   if (!finalText || finalText.trim().length < 3) {
     throw new Error('Browser smoke: empty #output')
   }
-  console.log(`Browser smoke OK  outputChars=${finalText.length}`)
+  console.log(`Browser smoke OK  port=${port} outputChars=${finalText.length}`)
   await browser.close()
 } catch (e) {
   console.error('Browser smoke failed:', e.message)
   if (viteLog) console.error(viteLog.slice(-2000))
   exitCode = 1
 } finally {
-  vite.kill()
+  vite.kill('SIGTERM')
 }
 
 process.exit(exitCode)
