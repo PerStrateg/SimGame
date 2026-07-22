@@ -8,10 +8,18 @@
     "build": "vite build",
     "preview": "vite preview",
     "example": "node scripts/run-example.mjs",
-    "examples": "node scripts/run-example.mjs --list"
+    "examples": "node scripts/run-example.mjs --list",
+    "play": "node cli/play.mjs",
+    "cli": "node cli/play.mjs",
+    "test": "node cli/test.mjs",
+    "smoke": "node cli/smoke.mjs",
+    "smoke:cli": "node cli/smoke-cli.mjs",
+    "smoke:browser": "node cli/smoke-browser.mjs"
   },
   "devDependencies": {
     "@fortawesome/fontawesome-free": "5.15.4",
+    "happy-dom": "^20.11.0",
+    "playwright": "1.54",
     "vite": "^7.1.0"
   }
 }
