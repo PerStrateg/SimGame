@@ -1,46 +1,127 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
   <meta charset="utf-8"/>
   <title>Interactive Fiction Using QuestJS</title>
   <meta http-equiv="Content-Security-Policy" content="
     default-src 'self';
-    style-src 'unsafe-inline' 'self' https://fonts.googleapis.com https://cdnjs.cloudflare.com;
-    font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com;
+    style-src 'unsafe-inline' 'self' https://fonts.googleapis.com;
+    font-src 'self' https://fonts.gstatic.com;
     script-src 'unsafe-inline' 'self';
+    connect-src 'self' ws: wss:;
     img-src 'self';"
   >
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css" integrity="sha512-+4zCK9k+qNFUR5X+cKL9EIR+ZOhtIloNl9GIKS57V1MyNsYpYcUrUeQc9vNfzsWfV28IaLL3i96P9sdNyeRssA==" crossorigin="anonymous" />
-  
+  <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css" />
+  <style>
+    #quest-folder-badge {
+      position: fixed;
+      right: 8px;
+      bottom: 8px;
+      z-index: 9999;
+      max-width: min(90vw, 28rem);
+      padding: 4px 8px;
+      border: 1px solid #666;
+      background: rgba(0, 0, 0, 0.75);
+      color: #eee;
+      font: 12px/1.3 Consolas, "Courier New", monospace;
+      pointer-events: none;
+      opacity: 0.85;
+    }
+    #loading.quest-load-error {
+      color: #b00020;
+      white-space: pre-wrap;
+    }
+  </style>
 
   <script>
-    let folder = 'game/'
-    let loaded = false
-    if (window.location.search) folder = 'game-' + window.location.search.substring(1) + '/'
     const qeditor = false
     const resourcesFolder = ''
-  </script>
+    const isDevHost = location.hostname === '127.0.0.1' || location.hostname === 'localhost'
+    const cacheBust = isDevHost ? ('?t=' + Date.now()) : ''
 
-  <script src="lib/_util.js"></script>
-  <script src="lib/_settings.js"></script>
+    function resolveGameFolder() {
+      const params = new URLSearchParams(location.search)
+      const example = params.get('example')
+      if (example) {
+        const name = example.replace(/^game-/, '')
+        return 'examples/game-' + name + '/'
+      }
+      const folderParam = params.get('folder')
+      if (folderParam) {
+        return folderParam.replace(/\/?$/, '/')
+      }
+      return 'game/'
+    }
 
-  <script>
-    const myScript = document.createElement("script")
-    myScript.setAttribute("src", folder + '/settings.js')
-    myScript.onload = function() {
-      settings.writeScript(folder, "", "")
+    const folder = resolveGameFolder()
+
+    function withCacheBust(src) {
+      if (!cacheBust) return src
+      return src.includes('?') ? src : (src + cacheBust)
     }
-    myScript.onerror = function() {
-      console.log("Failed to load file \"" + folder + "/settings.js\".")
-      console.log("Check the file and folder actually exist.")
-      console.log("This is probably because the folder \"" + folder + "\" does not exist, perhaps because it is wrongly specified in the address.")
+
+    function showFolderBadge() {
+      const el = document.createElement('div')
+      el.id = 'quest-folder-badge'
+      el.textContent = folder.replace(/\/$/, '')
+      document.body.appendChild(el)
+      document.title = el.textContent + ' · QuestJS'
     }
-    document.head.appendChild(myScript)
+
+    function showLoadError(failedSrc) {
+      const el = document.getElementById('loading')
+      if (!el) return
+      el.classList.add('quest-load-error')
+      el.textContent =
+        'Не удалось загрузить игру.\n' +
+        'Папка: ' + folder + '\n' +
+        (failedSrc ? ('Файл: ' + failedSrc + '\n') : '') +
+        'Проверьте путь. Для example: /?example=item-links'
+    }
+
+    function loadBootstrapScript(src) {
+      return new Promise(function (resolve, reject) {
+        const el = document.createElement('script')
+        el.src = withCacheBust(src)
+        el.onload = resolve
+        el.onerror = function () {
+          console.log('Failed to load file "' + src + '".')
+          reject(new Error(src))
+        }
+        document.head.appendChild(el)
+      })
+    }
+
+    function installScriptCacheBust() {
+      if (!cacheBust || typeof settings === 'undefined' || !settings.loadScript) return
+      const original = settings.loadScript.bind(settings)
+      settings.loadScript = function (filename, doc) {
+        return original(withCacheBust(filename), doc)
+      }
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', showFolderBadge)
+    } else {
+      showFolderBadge()
+    }
+
+    loadBootstrapScript('lib/_util.js')
+      .then(function () { return loadBootstrapScript('lib/_settings.js') })
+      .then(function () {
+        installScriptCacheBust()
+        return loadBootstrapScript(folder + 'settings.js')
+      })
+      .then(function () {
+        settings.writeScript(folder)
+      })
+      .catch(function (err) {
+        console.log('Check the file and folder actually exist.')
+        console.log('This is probably because the folder "' + folder + '" does not exist, perhaps because it is wrongly specified in the address.')
+        showLoadError(err && err.message)
+      })
   </script>
-  
 </head>
-
-
 
 <body>
 
